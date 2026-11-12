@@ -7,8 +7,18 @@ Interfața (React + Vite + PWA, ca la Fazan) vine peste el.
 ```
 npm install
 npm test           # reguli, partide, serii + partide complete simulate între boți
-npm run typecheck
+npm run build      # prototipul jucabil -> prototip/dist/index.html
 ```
+
+## Prototipul jucabil
+`prototip/` conține un singur fișier HTML, cu motorul, interfața și stilul inline.
+- Joci contra boților în 3–6 jucători, pe una din cele patru mese: bancă, covor, pat sau profesională.
+- Ai licitare cu restricția dealerului, cărțile jucabile evidențiate, pachetul și atuul pe masă și foaia de scor completă.
+- Interfața e în română sau engleză.
+- Pe orizontal, foaia de scor stă în lateral și se poate strânge.
+- „Mâinile zilei” dă aceleași cărți pentru toată lumea în ziua respectivă, ca demonstrație pentru Turneul zilei.
+
+La fiecare push pe `main`, GitHub Actions rulează testele și publică prototipul pe GitHub Pages.
 
 ## Reguli implementate (după pagat.com/exact/romwhist.html)
 - **3–6 jucători**, 8 cărți de jucător: 3 → A..9, 4 → A..7, 5 → A..5, 6 → A..3.
