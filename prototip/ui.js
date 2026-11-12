@@ -54,6 +54,7 @@
   var afisareLevata = null; // { carti, castigator } afisata dupa o levata completa
   var mesaj = '';
   var foaieDeschisa = false;
+  var cheieNoua = null;      // doar ultima carte pusa pe masa are animatie
   var foaieLaterala = true; // pe orizontal
   var timer = null;
   var app = document.getElementById('app');
@@ -78,7 +79,19 @@
   function pozitie(i, raza) {
     if (i === 0) return { x: 50, y: 50 + raza };
     var a = UNGHIURI[p.jucatori.length][i - 1] * Math.PI / 180;
-    return { x: 50 + Math.cos(a) * raza * 0.92, y: 50 - Math.sin(a) * raza * 0.8 };
+    return { x: 50 + Math.cos(a) * raza * 0.92, y: 50 - Math.sin(a) * raza * (peOrizontal() ? 0.8 : 0.9) };
+  }
+
+  function peOrizontal() { return window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches; }
+  // Cartile din levata stau intre jucator si atuul din mijloc
+  function pozitieLevata(i, idx) {
+    if (peOrizontal()) {
+      // pe orizontal: levata intr-un rand, in ordinea jucarii, la dreapta atuului
+      var n = p.jucatori.length, pas = Math.min(9, 27 / (n - 1));
+      return { x: 59 + (idx - (n - 1) / 2) * pas, y: 56 };
+    }
+    var a = i === 0 ? -Math.PI / 2 : UNGHIURI[p.jucatori.length][i - 1] * Math.PI / 180;
+    return { x: 50 + Math.cos(a) * 24, y: 50 - Math.sin(a) * 21 };
   }
 
   // ---------- ecranul de start ----------
@@ -141,6 +154,8 @@
 
   function aplicaJoc(jucator, carte) {
     var inainte = p.mana.levataCurenta.length;
+    cheieNoua = W.cheie(carte);
+    setTimeout(function () { cheieNoua = null; }, 260);
     var r = W.joaca(p, jucator, carte);
     if (!r.ok) { mesaj = r.eroare; deseneaza(); return; }
     p = r.partida;
@@ -182,15 +197,15 @@
 
     // levata
     var levata = levataAfisata.map(function (x, idx) {
-      var poz = pozitie(x.jucator, 15);
+      var poz = pozitieLevata(x.jucator, idx);
       var rot = (x.jucator * 37 % 24) - 12;
-      return carteHtml(x.carte, { cls: 'pe-masa' + (castigator === x.jucator ? ' castigatoare' : ''), style: 'left:' + poz.x + '%;top:' + poz.y + '%;transform:translate(-50%,-50%) rotate(' + rot + 'deg);z-index:' + (idx + 1) });
+      return carteHtml(x.carte, { cls: 'pe-masa' + (castigator === x.jucator ? ' castigatoare' : '') + (W.cheie(x.carte) === cheieNoua ? ' noua' : ''), style: 'left:' + poz.x + '%;top:' + poz.y + '%;transform:translate(-50%,-50%) rotate(' + rot + 'deg);z-index:' + (10 + idx) });
     }).join('');
 
     // pachetul cu atuul
     var pachet = m.carteAtu
-      ? '<div class="pachet"><div class="atu-carte">' + carteHtml(m.carteAtu, { cls: 'mica' }) + '</div><span class="dos mare"></span><span class="eticheta">' + t('atu') + ' ' + SIMBOL[m.atu] + '</span></div>'
-      : '<div class="pachet"><span class="eticheta">' + t('faraAtu') + '</span></div>';
+      ? '<div class="pachet"><span class="dos mare"></span>' + carteHtml(m.carteAtu, { cls: 'atu-carte' }) + '<span class="eticheta">' + t('atu') + ' ' + SIMBOL[m.atu] + '</span></div>'
+      : '<div class="pachet fara"><span class="eticheta">' + t('faraAtu') + '</span></div>';
 
     // mana mea
     var posibile = W.cartiPosibile(p, 0);
@@ -224,8 +239,8 @@
       '<main class="zona"><div class="masa"><div class="suprafata"></div>' + locuri + levata + pachet + '</div>' +
       '<div class="stare' + (stare ? '' : ' gol') + '">' + esc(stare || '·') + '</div>' +
       '<div class="eu"><span class="insigna mea' + (p.laRand === 0 && p.faza !== 'sfarsitMana' ? ' la-rand' : '') + '">' + t('tu') + (m.dealer === 0 ? ' (D)' : '') + ' · ' + (eu === null ? '–' : eu + ' / ' + m.levate[0]) + ' · ' + p.scor[0] + 'p</span></div>' +
-      '<div class="mana-mea" style="--k:' + Math.max(mana.length, 1) + '">' + cartiMele + '</div></main>' +
       (p.faza === 'licitare' && p.laRand === 0 ? panouLicitare() : '') +
+      '<div class="mana-mea" style="--k:' + Math.max(mana.length, 1) + '">' + cartiMele + '</div></main>' +
       (p.faza === 'sfarsitMana' && !afisareLevata ? panouSfarsit() : '') +
       (p.faza === 'terminata' ? panouFinal() : '') +
       (foaieDeschisa ? '<div class="voal" id="voal"></div><section class="foaie-sheet">' + foaieHtml(false) + '</section>' : '');
@@ -243,7 +258,7 @@
       if (!ok) interzisa = b;
       butoane += '<button class="lic' + (ok ? '' : ' interzis') + '" data-lic="' + b + '"' + (ok ? '' : ' disabled aria-label="' + b + ', interzis"') + '>' + b + '</button>';
     }
-    return '<section class="panou">' +
+    return '<section class="panou inline">' +
       '<h2>' + t('liciteaza') + '</h2>' +
       '<p class="mic">' + (facute.length ? 'Σ ' + suma + ' ' + t('din2') + ' ' + m.nrCarti : '') + '</p>' +
       '<div class="butoane-lic" style="grid-template-columns:repeat(' + Math.min(m.nrCarti + 1, 5) + ',1fr)">' + butoane + '</div>' +
@@ -339,5 +354,6 @@
     return false;
   }
 
+  window.addEventListener('resize', function () { if (p) deseneaza(); });
   ecranStart();
 })();
